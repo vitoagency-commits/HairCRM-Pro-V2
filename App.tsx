@@ -34,85 +34,6 @@ interface SettingsDraft {
 }
 
 export const App: React.FC = () => {
-
-    // --- FIX IOS: STATI FORM AGGIUNTA CLIENTE SPOSTATI QUI ---
-  const [newClientFormData, setNewClientFormData] = useState<Partial<Client>>({
-      companyName: '', firstName: '', lastName: '', vatId: '', phone: '', whatsapp: '', email: '', website: '',
-      address: { street: '', number: '', city: '', zip: '', region: '' },
-      notes: ''
-  });
-  const [newClientInitialBalance, setNewClientInitialBalance] = useState<{type: 'dare'|'avere', amount: string, desc: string}>({
-       type: 'dare', amount: '', desc: 'Saldo precedente' 
-  });
-  const [newClientTempLogo, setNewClientTempLogo] = useState<string | null>(null);
-  const [isGenNewLogo, setIsGenNewLogo] = useState(false);
-
-  // Funzioni di supporto per il nuovo form
-  const updateNewClientAddr = (f: keyof Address, v: string) => {
-      setNewClientFormData(prev => ({ ...prev, address: { ...prev.address!, [f]: v } }));
-  };
-
-  const generateNewClientLogo = async () => {
-        if (!newClientFormData.companyName) return alert("Inserisci prima il nome dell'azienda!");
-        setIsGenNewLogo(true);
-        try {
-          const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || localStorage.getItem('haircrm_gm_key') || "" });
-          const prompt = `Minimalistic professional logo for hair salon '${newClientFormData.companyName}'. Elegant, modern, white background.`;
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: { role: 'user', parts: [{ text: prompt }] } as any 
-          });
-          // Nota: Simuliamo il successo se l'API non risponde con immagine diretta per evitare crash
-          // In produzione servirebbe l'API imagen o un placeholder
-        } catch (e) { console.error(e); }
-        finally { setIsGenNewLogo(false); }
-  };
-
-  const handleSaveNewClient = () => {
-        if (!newClientFormData.companyName) return alert("Nome azienda obbligatorio");
-        
-                const newClient: Client = {
-            id: crypto.randomUUID(),
-            companyName: newClientFormData.companyName,
-            firstName: newClientFormData.firstName || '',
-            lastName: newClientFormData.lastName || '',
-            vatId: newClientFormData.vatId || '',
-            phone: newClientFormData.phone || '',
-            whatsapp: newClientFormData.whatsapp || '',
-            email: newClientFormData.email || '',
-            website: newClientFormData.website || '',
-            address: newClientFormData.address as Address,
-            coords: { lat: 41.9028, lng: 12.4964 }, 
-            notes: newClientFormData.notes || '',
-            transactions: [],
-            logo: newClientTempLogo || undefined,
-            
-            // Le righe obbligatorie aggiunte:
-            files: [],
-            reminders: [],
-            createdAt: new Date().toISOString()
-        };
-
-
-        if (newClientInitialBalance.amount && !isNaN(parseFloat(newClientInitialBalance.amount))) {
-            newClient.transactions.push({
-                id: crypto.randomUUID(),
-                date: new Date().toISOString().split('T')[0],
-                type: newClientInitialBalance.type,
-                amount: parseFloat(newClientInitialBalance.amount),
-                description: newClientInitialBalance.desc
-            });
-        }
-
-        setClients([...clients, newClient]);
-        // Reset del form
-        setNewClientFormData({ companyName: '', firstName: '', lastName: '', vatId: '', phone: '', whatsapp: '', email: '', website: '', address: { street: '', number: '', city: '', zip: '', region: '' }, notes: '' });
-        setNewClientInitialBalance({ type: 'dare', amount: '', desc: 'Saldo precedente' });
-        setNewClientTempLogo(null);
-        setActiveTab('list');
-        alert("Cliente salvato con successo!");
-  };
-
   // --- State Principale ---
   const [clients, setClients] = useState<Client[]>([]);
   const [tours, setTours] = useState<Tour[]>([]);
@@ -173,7 +94,6 @@ export const App: React.FC = () => {
   
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
-  
   
   // Configurazione Cloud (Supabase) Dinamica
   const [cloudProvider, setCloudProvider] = useState<'none' | 'supabase'>(
@@ -1177,7 +1097,205 @@ export const App: React.FC = () => {
     </button>
   );
 
+  const ClientForm = () => {
+    const [formData, setFormData] = useState<Partial<Client>>({
+      companyName: '', firstName: '', lastName: '', vatId: '', phone: '', whatsapp: '', email: '', website: '',
+      address: { street: '', number: '', city: '', zip: '', region: '' },
+      notes: ''
+    });
+    const [initialBalance, setInitialBalance] = useState<{type: 'dare'|'avere', amount: string, desc: string}>({
+       type: 'dare', amount: '', desc: 'Saldo precedente' 
+    });
+    const [tempLogo, setTempLogo] = useState<string | null>(null);
+    const [isGenLogo, setIsGenLogo] = useState(false);
 
+    const updateAddr = (f: keyof Address, v: string) => setFormData({ ...formData, address: { ...formData.address!, [f]: v } });
+
+    const generateLogo = async () => {
+        if (!formData.companyName) return alert("Inserisci prima il nome dell'azienda!");
+        setIsGenLogo(true);
+        try {
+          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+          const prompt = `Minimalistic professional logo for hair salon '${formData.companyName}'. Elegant, modern, white background.`;
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [{ text: prompt }] },
+            config: { imageConfig: { aspectRatio: "1:1" } }
+          });
+          const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+          if (part?.inlineData) {
+            setTempLogo(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+          }
+        } catch (e) { console.error(e); alert("Errore generazione logo"); }
+        finally { setIsGenLogo(false); }
+    };
+
+    const handleSave = () => {
+        if (!formData.companyName) return alert("Inserisci il nome dell'attività!");
+        
+        const newC: Client = {
+            id: crypto.randomUUID(),
+            companyName: formData.companyName,
+            firstName: formData.firstName || '',
+            lastName: formData.lastName || '',
+            vatId: formData.vatId || '',
+            phone: formData.phone || '',
+            whatsapp: formData.whatsapp || formData.phone || '', 
+            email: formData.email || '',
+            website: formData.website || '',
+            address: formData.address as Address,
+            coords: { lat: 41.9028 + (Math.random()-0.5)*0.1, lng: 12.4964 + (Math.random()-0.5)*0.1 }, 
+            logo: tempLogo || undefined,
+            notes: formData.notes || '',
+            files: [],
+            transactions: [],
+            reminders: [],
+            events: [],
+            createdAt: new Date().toISOString()
+        };
+
+        if (initialBalance.amount && !isNaN(parseFloat(initialBalance.amount))) {
+            newC.transactions.push({
+                id: crypto.randomUUID(),
+                amount: parseFloat(initialBalance.amount),
+                type: initialBalance.type,
+                description: initialBalance.desc || 'Saldo iniziale',
+                date: new Date().toISOString()
+            });
+        }
+
+        setClients([...clients, newC]);
+        setActiveTab('list');
+    };
+
+    return (
+      <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 max-w-3xl mx-auto mb-24 animate-in slide-in-from-bottom duration-500 overflow-hidden relative">
+        <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+           <h2 className="text-2xl font-black uppercase tracking-tighter text-purple-600">Nuova Scheda Cliente</h2>
+           <button onClick={() => setActiveTab('list')} className="p-3 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 text-gray-400"><XIcon className="w-6 h-6"/></button>
+        </div>
+
+        <div className="p-10 space-y-12">
+            <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="w-32 h-32 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden relative group cursor-pointer hover:border-purple-300 transition-colors">
+                    {tempLogo ? (
+                        <img src={tempLogo} className="w-full h-full object-cover" />
+                    ) : (
+                        <PlusIcon className="w-10 h-10 text-gray-300 group-hover:text-purple-400"/>
+                    )}
+                    {isGenLogo && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"/></div>}
+                </div>
+                <div className="flex gap-4">
+                   <button onClick={() => {}} className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600">Carica Logo</button>
+                   <span className="text-gray-300">|</span>
+                   <button onClick={generateLogo} className="text-[10px] font-black uppercase tracking-widest text-purple-600 hover:text-purple-700">Genera con IA</button>
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Dati Principali</h3>
+                <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" placeholder="Nome Azienda / Salone" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" placeholder="Nome Titolare" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} />
+                    <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" placeholder="Cognome Titolare" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} />
+                </div>
+                <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" placeholder="Partita I.V.A." value={formData.vatId} onChange={e => setFormData({...formData, vatId: e.target.value})} />
+            </div>
+
+            <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Indirizzo</h3>
+                <div className="grid grid-cols-[2fr_1fr] gap-5">
+                     <div className="relative">
+                        <input className="w-full bg-orange-50/40 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-orange-100 transition-all placeholder:text-orange-300/70 border border-orange-100/30" placeholder="Indirizzo / Via" value={formData.address?.street} onChange={e => updateAddr('street', e.target.value)} />
+                        {!formData.address?.street && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-orange-400 uppercase tracking-widest pointer-events-none">⚠ Dati mancanti</span>}
+                     </div>
+                     <div className="relative">
+                        <input className="w-full bg-orange-50/40 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-orange-100 transition-all placeholder:text-orange-300/70 border border-orange-100/30" placeholder="N° Civico" value={formData.address?.number} onChange={e => updateAddr('number', e.target.value)} />
+                        {!formData.address?.number && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-orange-400 uppercase tracking-widest pointer-events-none">!</span>}
+                     </div>
+                </div>
+                <div className="grid grid-cols-[2fr_1fr] gap-5">
+                     <div className="relative">
+                        <input className="w-full bg-orange-50/40 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-orange-100 transition-all placeholder:text-orange-300/70 border border-orange-100/30" placeholder="Città" value={formData.address?.city} onChange={e => updateAddr('city', e.target.value)} />
+                        {!formData.address?.city && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-orange-400 uppercase tracking-widest pointer-events-none">⚠ Dati mancanti</span>}
+                     </div>
+                     <div className="relative">
+                        <input className="w-full bg-orange-50/40 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-orange-100 transition-all placeholder:text-orange-300/70 border border-orange-100/30" placeholder="CAP" value={formData.address?.zip} onChange={e => updateAddr('zip', e.target.value)} />
+                        {!formData.address?.zip && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-orange-400 uppercase tracking-widest pointer-events-none">!</span>}
+                     </div>
+                </div>
+                <div className="relative">
+                   <input className="w-full bg-orange-50/40 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-orange-100 transition-all placeholder:text-orange-300/70 border border-orange-100/30" placeholder="Regione" value={formData.address?.region} onChange={e => updateAddr('region', e.target.value)} />
+                   {!formData.address?.region && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-orange-400 uppercase tracking-widest pointer-events-none">⚠ Dati mancanti</span>}
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Contatti & Web</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                     <div className="relative">
+                        <input className="w-full bg-orange-50/40 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-orange-100 transition-all placeholder:text-orange-300/70 border border-orange-100/30" placeholder="Telefono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                        {!formData.phone && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-orange-400 uppercase tracking-widest pointer-events-none">⚠ Dati mancanti</span>}
+                     </div>
+                     <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" placeholder="WhatsApp" value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} />
+                </div>
+                <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" placeholder="Sito Web (https://...)" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} />
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                    <WalletIcon className="w-4 h-4 text-gray-400"/>
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">1. Situazione Contabile Iniziale</h3>
+                </div>
+                <div className="grid grid-cols-[1fr_1fr_1.5fr] gap-4">
+                    <div className="relative">
+                        <select 
+                          className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none appearance-none cursor-pointer" 
+                          value={initialBalance.type} 
+                          onChange={e => setInitialBalance({...initialBalance, type: e.target.value as 'dare'|'avere'})}
+                        >
+                            <option value="dare">DARE (Debito)</option>
+                            <option value="avere">AVERE (Credito)</option>
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">▼</div>
+                    </div>
+                    <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none" type="number" placeholder="Importo €" value={initialBalance.amount} onChange={e => setInitialBalance({...initialBalance, amount: e.target.value})} />
+                    <input className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none" placeholder="Descrizione (es. Saldo prec.)" value={initialBalance.desc} onChange={e => setInitialBalance({...initialBalance, desc: e.target.value})} />
+                </div>
+            </div>
+
+             <div className="space-y-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                    <FileIcon className="w-4 h-4 text-gray-400"/>
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">2. Note Iniziali</h3>
+                </div>
+                <textarea className="w-full bg-gray-50 p-5 rounded-2xl font-bold text-gray-700 outline-none h-32 resize-none placeholder:text-gray-300" placeholder="Scrivi qui eventuali note sul cliente..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
+             </div>
+
+             <div className="space-y-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <UploadCloudIcon className="w-4 h-4 text-gray-400"/>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">3. Archivio Documenti</h3>
+                    </div>
+                    <button className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center hover:bg-purple-100"><PlusIcon className="w-4 h-4"/></button>
+                </div>
+                <div className="w-full h-32 border-2 border-dashed border-gray-200 rounded-[2rem] flex flex-col items-center justify-center text-gray-300 gap-2 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center"><FileIcon className="w-5 h-5"/></div>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Tocca per caricare file</span>
+                </div>
+             </div>
+
+             <div className="sticky bottom-0 bg-white/90 backdrop-blur-sm p-4 -mx-10 -mb-10 border-t border-gray-100">
+                 <button onClick={handleSave} className="w-full py-5 bg-purple-600 text-white font-black rounded-[1.5rem] uppercase tracking-widest shadow-xl shadow-purple-200 hover:scale-[1.01] active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                    <CheckIcon className="w-5 h-5" /> Crea Scheda Cliente
+                 </button>
+             </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24 font-sans text-gray-800 relative overflow-x-hidden">
@@ -1681,64 +1799,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-                   {activeTab === 'add' && (
-                <div className="max-w-2xl mx-auto bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-8 animate-in slide-in-from-bottom-4 duration-500 mb-24">
-                    <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                        <h2 className="text-xl font-black uppercase tracking-tighter text-purple-600">Nuovo Cliente</h2>
-                        <button onClick={() => setActiveTab('list')} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100"><XIcon className="w-5 h-5 text-gray-400"/></button>
-                    </div>
-
-                    <div className="text-center space-y-2">
-                         <div className="w-24 h-24 bg-purple-50 rounded-3xl mx-auto flex items-center justify-center mb-4 relative overflow-hidden shadow-inner group cursor-pointer border border-purple-100" onClick={generateNewClientLogo}>
-                             {isGenNewLogo ? <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full"/> : 
-                              newClientTempLogo ? <img src={newClientTempLogo} className="w-full h-full object-cover" /> :
-                              <PlusIcon className="w-8 h-8 text-purple-300 group-hover:scale-110 transition-transform"/>
-                             }
-                        </div>
-                        <p className="text-[10px] uppercase tracking-widest text-purple-400 font-bold">Logo Azienda</p>
-                    </div>
-
-                    <div className="space-y-5">
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><UserIcon className="h-5 w-5 text-gray-300"/></div>
-                            <input 
-                                className="w-full bg-gray-50 pl-12 pr-4 py-4 rounded-2xl font-bold text-lg text-gray-800 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-300" 
-                                placeholder="Nome Azienda / Salone *"
-                                value={newClientFormData.companyName}
-                                onChange={e => setNewClientFormData(prev => ({...prev, companyName: e.target.value}))}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                             <input className="bg-gray-50 p-4 rounded-2xl font-medium text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 placeholder:text-gray-300" placeholder="Nome Titolare" value={newClientFormData.firstName} onChange={e => setNewClientFormData(prev => ({...prev, firstName: e.target.value}))} />
-                             <input className="bg-gray-50 p-4 rounded-2xl font-medium text-gray-700 outline-none focus:ring-2 focus:ring-purple-100 placeholder:text-gray-300" placeholder="Cognome" value={newClientFormData.lastName} onChange={e => setNewClientFormData(prev => ({...prev, lastName: e.target.value}))} />
-                        </div>
-
-                        <div className="space-y-3 pt-4 border-t border-gray-50">
-                             <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Contatti</h3>
-                             <input className="w-full bg-gray-50 p-4 rounded-2xl font-medium text-gray-700 outline-none placeholder:text-gray-300" placeholder="Telefono" value={newClientFormData.phone} onChange={e => setNewClientFormData(prev => ({...prev, phone: e.target.value}))} />
-                             <input className="w-full bg-gray-50 p-4 rounded-2xl font-medium text-gray-700 outline-none placeholder:text-gray-300" placeholder="Email" value={newClientFormData.email} onChange={e => setNewClientFormData(prev => ({...prev, email: e.target.value}))} />
-                        </div>
-
-                        <div className="space-y-3 pt-4 border-t border-gray-50">
-                             <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Indirizzo</h3>
-                             <div className="grid grid-cols-[2fr_1fr] gap-3">
-                                <input className="bg-gray-50 p-4 rounded-2xl font-medium placeholder:text-gray-300" placeholder="Via" value={newClientFormData.address?.street} onChange={e => updateNewClientAddr('street', e.target.value)} />
-                                <input className="bg-gray-50 p-4 rounded-2xl font-medium placeholder:text-gray-300" placeholder="N°" value={newClientFormData.address?.number} onChange={e => updateNewClientAddr('number', e.target.value)} />
-                            </div>
-                            <div className="grid grid-cols-[2fr_1fr] gap-3">
-                                <input className="bg-gray-50 p-4 rounded-2xl font-medium placeholder:text-gray-300" placeholder="Città" value={newClientFormData.address?.city} onChange={e => updateNewClientAddr('city', e.target.value)} />
-                                <input className="bg-gray-50 p-4 rounded-2xl font-medium placeholder:text-gray-300" placeholder="CAP" value={newClientFormData.address?.zip} onChange={e => updateNewClientAddr('zip', e.target.value)} />
-                            </div>
-                        </div>
-
-                        <button onClick={handleSaveNewClient} className="w-full bg-black text-white py-4 rounded-2xl font-bold text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all mt-6">
-                            Salva Cliente
-                        </button>
-                    </div>
-                </div>
-            )}
-
+        {activeTab === 'add' && <ClientForm />}
 
         {activeTab === 'settings' && (
             <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-500 mb-24">
