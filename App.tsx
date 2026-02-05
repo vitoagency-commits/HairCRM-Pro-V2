@@ -173,6 +173,7 @@ export const App: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   
+  
   // Configurazione Cloud (Supabase) Dinamica
   const [cloudProvider, setCloudProvider] = useState<'none' | 'supabase'>(
     (localStorage.getItem('haircrm_cloud_provider') as 'none' | 'supabase') || 
