@@ -86,11 +86,11 @@ export const App: React.FC = () => {
             notes: newClientFormData.notes || '',
             transactions: [],
             
-            lastVisit: null,
+            
             logo: newClientTempLogo || undefined,
-            rating: 0,
-            tags: [],
-            events: []
+            
+            
+           
         };
 
         if (newClientInitialBalance.amount && !isNaN(parseFloat(newClientInitialBalance.amount))) {
