@@ -85,7 +85,7 @@ export const App: React.FC = () => {
             coords: { lat: 41.9028, lng: 12.4964 }, // Default Roma
             notes: newClientFormData.notes || '',
             transactions: [],
-            loyaltyPoints: 0,
+            
             lastVisit: null,
             logo: newClientTempLogo || undefined,
             rating: 0,
