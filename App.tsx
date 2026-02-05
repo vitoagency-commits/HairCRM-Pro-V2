@@ -71,7 +71,7 @@ export const App: React.FC = () => {
   const handleSaveNewClient = () => {
         if (!newClientFormData.companyName) return alert("Nome azienda obbligatorio");
         
-        const newClient: Client = {
+                const newClient: Client = {
             id: crypto.randomUUID(),
             companyName: newClientFormData.companyName,
             firstName: newClientFormData.firstName || '',
@@ -82,18 +82,17 @@ export const App: React.FC = () => {
             email: newClientFormData.email || '',
             website: newClientFormData.website || '',
             address: newClientFormData.address as Address,
-            coords: { lat: 41.9028, lng: 12.4964 }, // Default Roma
+            coords: { lat: 41.9028, lng: 12.4964 }, 
             notes: newClientFormData.notes || '',
             transactions: [],
-             
             logo: newClientTempLogo || undefined,
             
-            
-           
-        files: [],
-reminders: [],
-createdAt: new Date().toISOString(),
-};
+            // Le righe obbligatorie aggiunte:
+            files: [],
+            reminders: [],
+            createdAt: new Date().toISOString()
+        };
+
 
         if (newClientInitialBalance.amount && !isNaN(parseFloat(newClientInitialBalance.amount))) {
             newClient.transactions.push({
