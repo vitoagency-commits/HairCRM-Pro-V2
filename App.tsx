@@ -85,13 +85,15 @@ export const App: React.FC = () => {
             coords: { lat: 41.9028, lng: 12.4964 }, // Default Roma
             notes: newClientFormData.notes || '',
             transactions: [],
-            
-            
+             
             logo: newClientTempLogo || undefined,
             
             
            
-        };
+        files: [],
+reminders: [],
+createdAt: new Date().toISOString(),
+};
 
         if (newClientInitialBalance.amount && !isNaN(parseFloat(newClientInitialBalance.amount))) {
             newClient.transactions.push({
