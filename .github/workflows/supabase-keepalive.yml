@@ -2,7 +2,6 @@ name: Keep Supabase Active
 
 on:
   schedule:
-    # Esegue il ping ogni giorno alle 12:00 UTC
     - cron: '0 12 * * *'
   workflow_dispatch:
 
@@ -12,6 +11,6 @@ jobs:
     steps:
       - name: Ping Supabase Database
         run: |
-          curl -i -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/app_state?select=*" \
+          curl -i -X GET "https://mmmkapltpimlksngphmk.supabase.co/rest/v1/app_state?select=*" \
           -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}"
