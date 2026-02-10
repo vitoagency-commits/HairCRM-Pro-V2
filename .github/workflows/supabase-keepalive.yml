@@ -12,7 +12,7 @@ jobs:
       - name: Ping Supabase Database
         env:
           # Qui usiamo il tuo URL reale che abbiamo visto prima
-          SB_URL: "https://mmmkapltpimlkisngphmk.supabase.co"
+          SB_URL: "https://nmmkapltpimlksngphmk.supabase.co/rest/v1/"
           SB_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # Questo comando pulisce la chiave da eventuali spazi e lancia il ping
