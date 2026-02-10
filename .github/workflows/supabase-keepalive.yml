@@ -10,7 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase Database
+        env:
+          # Qui usiamo il tuo URL reale che abbiamo visto prima
+          SB_URL: "https://mmmkapltpimlkisngphmk.supabase.co"
+          SB_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          curl -i -X GET "https://mmmkapltpimlksngphmk.supabase.co/rest/v1/app_state?select=*" \
-          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-          -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}"
+          # Questo comando pulisce la chiave da eventuali spazi e lancia il ping
+          CLEAN_KEY=$(echo $SB_KEY | tr -d '[:space:]')
+          curl -i -X GET "${SB_URL}/rest/v1/app_state?select=*" \
+          -H "apikey: ${CLEAN_KEY}" \
+          -H "Authorization: Bearer ${CLEAN_KEY}"
