@@ -2,9 +2,8 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    # Esegue il job ogni giorno a mezzanotte
     - cron: '0 0 * * *'
-  workflow_dispatch: # Ti permette di avviarlo manualmente per testare
+  workflow_dispatch:
 
 jobs:
   ping:
