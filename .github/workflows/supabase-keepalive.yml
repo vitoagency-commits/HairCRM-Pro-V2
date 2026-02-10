@@ -1,22 +1,17 @@
-name: Keep Supabase Active
+name: Keep Supabase Alive
 
 on:
   schedule:
-    - cron: '0 12 * * *'
-  workflow_dispatch:
+    # Esegue il job ogni giorno a mezzanotte
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Ti permette di avviarlo manualmente per testare
 
 jobs:
-  ping-supabase:
+  ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase Database
-        env:
-          # Qui usiamo il tuo URL reale che abbiamo visto prima
-          SB_URL: "https://nmmkapltpimlksngphmk.supabase.co/rest/v1/"
-          SB_KEY: ${{ secrets.SUPABASE_KEY }}
+      - name: Ping Supabase API
         run: |
-          # Questo comando pulisce la chiave da eventuali spazi e lancia il ping
-          CLEAN_KEY=$(echo $SB_KEY | tr -d '[:space:]')
-          curl -i -X GET "${SB_URL}/rest/v1/app_state?select=*" \
-          -H "apikey: ${CLEAN_KEY}" \
-          -H "Authorization: Bearer ${CLEAN_KEY}"
+          curl -i -X GET "https://nmmkapltpimlksngphmk.supabase.co/rest/v1/" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
