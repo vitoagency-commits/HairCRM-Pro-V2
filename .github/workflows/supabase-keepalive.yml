@@ -2,7 +2,7 @@ name: Keep Supabase Active
 
 on:
   schedule:
-    # Esegue il ping ogni giorno alle 12:00 UTC per sicurezza
+    # Esegue il ping ogni giorno alle 12:00 UTC
     - cron: '0 12 * * *'
   workflow_dispatch:
 
@@ -11,10 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase Database
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          curl -i -X GET "${SUPABASE_URL}/rest/v1/app_state?select=*" \
-          -H "apikey: ${SUPABASE_KEY}" \
-          -H "Authorization: Bearer ${SUPABASE_KEY}"
+          curl -i -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/app_state?select=*" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}"
