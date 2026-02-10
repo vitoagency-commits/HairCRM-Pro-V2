@@ -1,19 +1,19 @@
-name: supabase-keepalive
+name: Keep Supabase Active
 
 on:
   schedule:
-    - cron: "0 9 */4 * *" # ogni 4 giorni (UTC)
+    - cron: '0 12 */6 * *'
   workflow_dispatch:
 
 jobs:
-  ping:
+  ping-supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping keepalive endpoint
+      - name: Ping Supabase Database
         env:
-          KEEPALIVE_URL: https://nmmkapltpimlksngphmk.supabase.co/functions/v1/keepalive
-          KEEPALIVE_TOKEN: ${{ secrets.KEEPALIVE_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          set -e
-          curl -sS -X POST "$KEEPALIVE_URL" \
-            -H "x-cron-token: $KEEPALIVE_TOKEN"
+          curl -X GET "${SUPABASE_URL}/rest/v1/app_state?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}"
